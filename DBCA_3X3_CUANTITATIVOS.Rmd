@@ -1,0 +1,1095 @@
+---
+title: "**ANÁLISIS DE UN DBCA FACTORIAL CON ARREGLO 3x3**"
+subtitle: "Estiércol y roca fosfórica en el rendimiento de Hordeum vulgare L. var Zapata en Santiago de Chuco, La Libertad"
+output: pdf_document
+---
+
+`Se desea evaluar el efecto del estiércol de ovino y  roca fosfórica en el rendimiento kg/ha de Hordeum vulgare L. var Zapata (cebada).`
+
+`Se empleo un diseño de Bloques Completos al azar con arreglo factorial 3x3 con 4 repeticiones`
+
+| FACTOR                          | NIVEL         | CLAVE |
+|---------------------------------|---------------|-------|
+|                                 | 0 $t./Ha.$    | $A_1$ |
+| Estiércol de ovino $t./Ha.$ (A) | 4 $t./Ha.$    | $A_2$ |
+|                                 | 8 $t./Ha.$    | $A_3$ |
+|                                 | 0 $Kg./Ha.$   | $B_1$ |
+| Roca Fosfórica $Kg./Ha.$ (B)    | 333 $Kg./Ha.$ | $B_2$ |
+|                                 | 666 $Kg./Ha.$ | $B_3$ |
+
+: FACTORES, NIVELES Y CLAVES
+
+| TRATAMIENTO                | CLAVE    |
+|----------------------------|----------|
+| 0 $t./Ha.$ x 0 $Kg./Ha.$   | $A_1B_1$ |
+| 0 $t./Ha.$ x 333 $Kg./Ha$  | $A_1B_2$ |
+| 0 $t./Ha.$ x 666 $Kg./Ha.$ | $A_1B_3$ |
+| 4 $t./Ha.$ x 0 $Kg./Ha.$   | $A_2B_1$ |
+| 4 $t./Ha.$ x 333 $Kg./Ha.$ | $A_2B_2$ |
+| 4 $t./Ha.$ x 666 $Kg./Ha.$ | $A_2B_3$ |
+| 8 $t./Ha.$ x 0 $kg./Ha.$   | $A_3B_1$ |
+| 8 $t./Ha.$ x 333 $Kg./Ha$  | $A_3B_2$ |
+| 8 $t./Ha.$ x 666 $Kg./Ha.$ | $A_3B_3$ |
+
+: COMBINACIONES O TRATAMIENTOS
+
+`Experimento Bifactorial 3x3, arreglo combinatorio con DBCA`
+
+![](cuadro_datos.png "Experimento Bifactorial 3x3, arreglo combinatorio con DBCA")
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r echo=FALSE,error=FALSE}
+library(carData)
+library(ggplot2)
+library(readxl)
+library(MVN)
+library(car)
+library(agricolae)
+data <- read_excel("data.xlsx",sheet = 1)
+attach(data)
+data1 <- read_excel("data.xlsx",sheet = 2)
+data$A= as.factor(data$A)
+data$B= as.factor(data$B)
+data$BLOQUE= as.factor(data$BLOQUE)
+data$TRATAMIENTO= as.factor(data$TRATAMIENTO)
+i=length(levels(data$A))
+j=length(levels(data$B))
+k=length(levels(data$BLOQUE))
+gl_i=i-1
+gl_j=j-1
+gl_b=k-1
+gl_trat=gl_i*gl_j
+gl_e=((gl_i+1)*(gl_j+1)-1)*((gl_b+1)-1)
+gl_total=gl_i+gl_j+gl_b+gl_e+gl_trat
+TC=(sum(data1)^2)/(i*j*k)
+SCT=sum(data1^2)-TC
+SCA=sum(sum(colSums(data1[1:3]))^2,sum(colSums(data1[4:6]))^2,sum(colSums(data1[7:9]))^2)/(j*k)-TC
+SCB=sum(sum(colSums(data1[,c(1,4,7)]))^2,sum(colSums(data1[,c(2,5,8)]))^2,sum(colSums(data1[,c(3,6,9)]))^2)/(i*k)-TC
+SCTRAT=(sum(colSums(data1)^2)/k) - TC -SCA-SCB
+SCBLO=sum(rowSums(data1)^2)/(i*j)-TC
+SCE=SCT-SCA-SCB-SCTRAT-SCBLO
+CME = SCE/gl_e
+result <- mvn(data = data1, univariateTest = "SW", desc = TRUE)
+modelo <- aov(RENDIMIENTO~BLOQUE+A+B+A*B, data = data)
+modeloT <- aov(RENDIMIENTO ~ BLOQUE+TRATAMIENTO,data=data)
+anova <- summary(modelo)
+```
+
+# VERIFICACIÓN DE SUPUESTOS
+
+ 
+
+I.  **Supuesto de Normalidad - Test de Shapiro Wilk**
+
+    -   $H_{0}:$ La distribución de los datos no difiere de la normal
+
+    <!-- -->
+
+    -   $H_{1}:$ La distribución de los datos difiere de la normal
+
+ 
+
+```{r,echo=FALSE,,fig.height=3.5}
+result$univariateNormality
+
+ggplot(data, aes(x = TRATAMIENTO,y= RENDIMIENTO)) + geom_boxplot() +   ggtitle ("Rendimiento de cebada en kg/ha en diferentes tratamientos")+ geom_boxplot(aes(fill=TRATAMIENTO)) + scale_x_discrete(labels = c("T1","T2", "T3", "T4", "T5", "T6", "T7","T8","T9")) + labs(x = "Tratamientos" , y = "Rendimiento en Kg ha-1" )+theme_bw() 
+```
+
+ 
+
+`Según el test de normalidad Shapiro Wilk, los valores de rendimiento en kg/ha para todos los tratamientos se distribuyen normalmente excepto el tratamiento 7 y 9, los cuales  presentan un valor atípico respectivamente`
+
+\pagebreak
+
+![Test Shapiro Wilk - SPSS](shapiro.png "Test Shapiro Wilk en SPSS"){width="352"}
+
+![Boxplot de los 9 tratamientos - SPSS](boxplot.png "Boxplot de los diferentes tratamientos en SPSS")
+
+\pagebreak
+
+II. **Supuesto de Homocedasticidad - Test de Levene**
+
+    -   $H_{0}: \hat\sigma^2_{T1} = \hat\sigma^2_{T2} = \cdot \cdot \cdot = \hat\sigma^2_{T9}$\
+
+    -   $H_{1}: \hat\sigma^2_{T1} \neq \hat\sigma^2_{T2} \neq \cdot \cdot \cdot \neq \hat\sigma^2_{T9}$
+
+ 
+
+```{r,echo=FALSE}
+leveneTest(data$RENDIMIENTO,data$TRATAMIENTO, center=median)
+```
+
+![Test de Levene - SPSS](levene.png){width="279"}
+
+ 
+
+`De acuerdo al test de levene las varianzas del rendimiento en Kg./Ha. en los 9 tratamientos son estadísticamente iguales`
+
+\pagebreak
+
+# ANOVA DEL RENDIMIENTO EN Kg./Ha.
+
+ 
+
+## Modelo Lineal Aditivo
+
+$x_{ijk} = \mu + \alpha_i + \beta_j + (\alpha\beta)_{ij} + \delta_k + \xi_{ijk}$
+
+$i = 1,2,3$\
+$j = 1,2,3$\
+$k = 1,2,3,4$  
+
+## Suma de Cuadrados
+
+ 
+
+-   $TC = \frac {x^2_{...}}{abr} = \frac {81^2}{3(3)4} = `r TC`$
+
+-   $SCT = \sum x^2_{ijk} - TC = `r SCT`$
+
+-   $SC_A = \sum \frac {x^2_{i..}}{br} - TC = `r SCA`$
+
+-   $SC_B = \sum \frac {x^2_{.j.}}{ar} - TC = `r SCB`$
+
+-   $SC_{AB} = ( \sum \frac {x^2_{ij.}}{r} - TC) - SC_A -SC_B = `r SCTRAT`$
+
+-   $SC_{Bloq.} = \sum \frac {x^2_{..k}}{ab} - TC = `r SCBLO`$
+
+ 
+
+## Hipótesis Estadísticas
+
+### Factor A : Estiércol de ovino
+
+1.  $H_0 : \alpha_i = 0 \\\ H_1 : \alpha_i \neq 0$
+2.  Nivel de confianza $\alpha= 1\%; \ 5\%$
+3.  $F_0 = 22.4263$
+4.  $F_{5 \%}(2,24) = `r qf(p = 0.05,df1 = 2,df2 = 24,lower.tail = FALSE)` \\ F_{1 \%}(2,24) = `r qf(p = 0.01,df1 = 2,df2 = 24,lower.tail = FALSE)`$
+5.  $F_0 > F_{1 \%}(2,24)$
+6.  Dado que $F_0 > F_{1 \%}(2,24)$ se rechaza la $H_0$, por lo tanto existe diferencia altamente significativa $(p<1\%)$ entre el rendimiento promedio$(Kg./Ha.)$ de las 3 dosis de estiércol de ovino.
+
+### Factor B : Roca Fosfórica de Sechura
+
+1.  $H_0 : \beta_j = 0 \\\ H_1 : \beta_j \neq 0$
+2.  Nivel de confianza $\alpha= 1\%; \ 5\%$
+3.  $F_0 = 19.4991$
+4.  $F_{5 \%}(2,24) = `r qf(p = 0.05,df1 = 2,df2 = 24,lower.tail = FALSE)` \\ F_{1 \%}(2,24) = `r qf(p = 0.01,df1 = 2,df2 = 24,lower.tail = FALSE)`$
+5.  $F_0 > F_{1 \%}(2,24)$
+6.  Dado que $F_0 > F_{1 \%}(2,24)$ se rechaza la $H_0$, por lo tanto existe diferencia altamente significativa $(p<1\%)$ entre el rendimiento promedio$(Kg./Ha.)$ de las 3 dosis de roca fosfórica.
+
+### Interacción AxB : Estiércol de ovino x Roca Fosfórica
+
+1.  $H_0 : (\alpha\beta)_{ij} = 0 \\\ H_1 : (\alpha\beta)_{ij} \neq 0$
+2.  Nivel de confianza $\alpha= 1\%; \ 5\%$
+3.  $F_0 = 5.0601$
+4.  $F_{5 \%}(4,24) = `r qf(p = 0.05,df1 = 4,df2 = 24,lower.tail = FALSE)` \\ F_{1 \%}(4,24) = `r qf(p = 0.01,df1 = 4,df2 = 24,lower.tail = FALSE)`$
+5.  $F_0 > F_{1 \%}(4,24)$
+6.  Dado que $F_0 > F_{1 \%}(3,24)$ se rechaza la $H_0$, por lo tanto existe interacción $(p<1\%)$ y los factores no son independientes.
+
+ 
+
+| $F.V$  |    $G.L$     |   $SC.$    |       $CM.$        |              $F_0$              | $Sig.$ |
+|:------:|:------------:|:----------:|:------------------:|:-------------------------------:|:------:|
+| Bloque |   `r gl_b`   | `r SCBLO`  |   `r SCBLO/gl_b`   |   `r (SCBLO*gl_e)/(SCE*gl_b)`   |        |
+|   A    |   `r gl_i`   |  `r SCA`   |    `r SCA/gl_i`    |    `r (SCA*gl_e)/(SCE*gl_i)`    |  \*\*  |
+|   B    |   `r gl_j`   |  `r SCB`   |    `r SCB/gl_j`    |    `r (SCB*gl_e)/(SCE*gl_j)`    |  \*\*  |
+| $A*B$  | `r gl_trat`  | `r SCTRAT` | `r SCTRAT/gl_trat` | `r (SCTRAT*gl_e)/(SCE*gl_trat)` |  \*\*  |
+| Error  |   `r gl_e`   |  `r SCE`   |    `r SCE/gl_e`    |                                 |        |
+| Total  | `r gl_total` |  `r SCT`   |                    |                                 |        |
+
+: ANOVA manualmente
+
+ 
+
+```{r,echo=FALSE}
+"Anova en R-Studio"
+anova
+```
+
+\pagebreak
+
+![ANOVA - SPSS](anovaspss.png){width="591"}
+
+![ANOVA - Statgraphics](anovastat.png){width="636"}
+
+\pagebreak
+
+# COMPARACIONES MULTIPLES A PRIORI
+
+ 
+
+## PARA FACTOR A : ESTIÉRCOL DE OVINO
+
+ 
+
+$$
+Totales =\left\{\begin{array}{ll}SC_{c} = \frac {Q^2}{rb \sum c^2_{i}} \\Q = \sum c_ix_{i..}\end{array}\right.
+$$
+
+ 
+
+| A : |    $A_1$    |    $A_2$    |    $A_3$    |
+|:---:|:-----------:|:-----------:|:-----------:|
+|     | $\mu_{1..}$ | $\mu_{2..}$ | $\mu_{3..}$ |
+
+$C_1 = \mu_{1..} \ vs. \ (\mu_{2..} \ ; \ \mu_{3..})$ $\Rightarrow$ $C_1 = 2\mu_{1..} \ - \ \mu_{2..} \ - \ \mu_{3..}$
+
+$C_2 = \mu_{2..} \ vs. \ \mu_{3..}$ $\Rightarrow$ $C_2 = \mu_{2..} \ - \ \mu_{3..}$
+
+ 
+
+I.  HIPÓTESIS
+
+    $H_{0}: c=0$
+
+    $H_{1}: c \neq 0$
+
+II. NIVEL DE SIGNIFICANCIA
+
+    $\alpha=0.05$
+
+    $\alpha=0.01$
+
+III. VERIFICACIÓN DE ORTOGONALIDAD
+
+     |          | $\mu_{1..}$ | $\mu_{2..}$ | $\mu_{3..}$ |
+     |:--------:|:-----------:|:-----------:|:-----------:|
+     |  $C_1$   |      2      |     -1      |     -1      |
+     |  $C_2$   |      0      |      1      |     -1      |
+     | $k_il_i$ |      0      |     -1      |      1      |
+
+     $\sum \frac {k_il_i}{n} = 0$
+
+     | $x_{i..}$ | 23.65 | 24.2 | 33.15 | $\sum C^2_{i}$ | $\sum c_ix_{i..}$ |         $SC_c$         |            $F_0$             | Sig. |
+     |:---------:|:-----:|:----:|:-----:|:--------------:|-------------------|:----------------------:|:----------------------------:|:----:|
+     |   $C_1$   |   2   |  -1  |  -1   |       6        | -10.05            | `r (-10.05)^2/(4*3*6)` | `r ((-10.05)^2/(4*3*6))/CME` | \*\* |
+     |   $C_2$   |   0   |  1   |  -1   |       2        | -8.95             | `r (-8.95)^2/(4*3*2)`  | `r ((-8.95)^2/(4*3*2))/CME`  | \*\* |
+
+     $SC_{C1} = \frac {Q^2}{rb \sum c^2_{i}} = \frac {(-10.05)^2}{4(3)(6)} = `r (-10.05)^2/(4*3*6)`$
+
+     $SC_{C2} = \frac {Q^2}{rb \sum c^2_{i}} = \frac {(-8.95)^2}{4(3)(2)} = `r (-8.95)^2/(4*3*2)`$
+
+     \pagebreak
+
+IV. ESTADÍSTICO DE PRUEBA
+
+    $F_{C1} = \frac {CM_{C_1}}{CM_E} = \frac {`r (-10.05)^2/(4*3*6)`}{`r CME`} = `r ((-10.05)^2/(4*3*6))/CME`$
+
+    $F_{C_2} = \frac {CM_{C_2}}{CM_E} = \frac {`r (-8.95)^2/(4*3*2)`}{`r CME`} = `r ((-8.95)^2/(4*3*2))/CME`$
+
+    Se comprueba que $SC_A = SC_{C_{1}} + SC_{C_{2}}$
+
+    -   $SC_A=$ `r SCA`
+
+    -   $SC_{C_{1}} + SC_{C_{2}} = `r (-10.05)^2/(4*3*6)` + `r (-8.95)^2/(4*3*2)` = `r (-10.05)^2/(4*3*6) + (-8.95)^2/(4*3*2)`$
+
+V.  PUNTO CRÍTICO
+
+    -   $F_t=`r round(qf(0.05,1,gl_e,lower.tail = F),4)`$ al $5\%$
+
+    -   $F_t=`r round(qf(0.01,1,gl_e,lower.tail = F),4)`$ al $1\%$
+
+VI. VALOR EXPERIMENTAL
+
+    -   $F_{C_{1}} = `r ((-10.05)^2/(4*3*6))/CME`$
+
+    -   $F_{C_{2}} = `r ((-8.95)^2/(4*3*2))/CME`$
+
+VII. DECISIÓN
+
+     -   Para el $C_1$ se rechaza la $H_0$ con un $99\%$ de confianza. Por lo tanto existe diferencia altamente significativa en el rendimiento de cebada $(Kg./Ha.)$ con dosis de estiercol de ovino de 4 y 8 $t/Ha.$. con respecto a ninguna dosis aplicada (Testigo).
+
+     -   Para el $C_2$ se rechaza la $H_0$ con un $99\%$ de confianza. Por lo tanto existe diferencia altamente significativa en el rendimiento de cebada $(Kg./Ha.)$ con dosis de estiercol de ovino de 8 $t/Ha.$. con respecto a una dosis de 4 $t/Ha.$ .
+
+\pagebreak
+
+$C_1 = \mu_{1..} \ vs. \ (\mu_{2..} \ ; \ \mu_{3..})$ $\Rightarrow$ $C_1 = 2\mu_{1..} \ - \ \mu_{2..} \ - \ \mu_{3..}$
+
+![Contraste 1 - SPSS](A/c1.png){width="359"}
+
+ 
+
+$C_2 = \mu_{2..} \ vs. \ \mu_{3..}$ $\Rightarrow$ $C_2 = \mu_{2..} \ - \ \mu_{3..}$
+
+![Constraste 2 -SPSS](A/C2.png){width="356"}
+
+\pagebreak
+
+## PARA FACTOR B : ROCA FOSFÓRICA  
+
+ 
+
+$$
+Totales =\left\{\begin{array}{ll}SC_{c} = \frac {Q^2}{ra \sum c^2_{i}} \\Q = \sum c_ix_{.j.}\end{array}\right.
+$$
+
+ 
+
+| A : |    $B_1$    |    $B_2$    |    $B_3$    |
+|:---:|:-----------:|:-----------:|:-----------:|
+|     | $\mu_{.1.}$ | $\mu_{.2.}$ | $\mu_{.3.}$ |
+
+$C_1 = \mu_{.1.} \ vs. \ (\mu_{.2.} \ ; \ \mu_{.3.})$ $\Rightarrow$ $C_1 = 2\mu_{.1.} \ - \ \mu_{.2.} \ - \ \mu_{.3.}$
+
+$C_2 = \mu_{.2.} \ vs. \ \mu_{.3.}$ $\Rightarrow$ $C_2 = \mu_{.2.} \ - \ \mu_{.3.}$
+
+ 
+
+I.  HIPÓTESIS
+
+    $H_{0}: c=0$
+
+    $H_{1}: c \neq 0$
+
+II. NIVEL DE SIGNIFICANCIA
+
+    $\alpha=0.05$
+
+    $\alpha=0.01$
+
+III. VERIFICACIÓN DE ORTOGONALIDAD
+
+     |          | $\mu_{.1.}$ | $\mu_{.2.}$ | $\mu_{.3.}$ |
+     |:--------:|:-----------:|:-----------:|:-----------:|
+     |  $C_1$   |      2      |     -1      |     -1      |
+     |  $C_2$   |      0      |      1      |     -1      |
+     | $k_il_i$ |      0      |     -1      |      1      |
+
+     $\sum \frac {k_il_i}{n} = 0$
+
+     | $x_{.j.}$ | 23.1 | 25.3 | 32.6 | $\sum C^2_{i}$ | $\sum c_ix_{.j.}$ |        $SC_c$         |            $F_0$            | Sig. |
+     |:---------:|:----:|:----:|:----:|:--------------:|-------------------|:---------------------:|:---------------------------:|:----:|
+     |   $C_1$   |  2   |  -1  |  -1  |       6        | -11.7             | `r (-11.7)^2/(4*3*6)` | `r ((-11.7)^2/(4*3*6))/CME` | \*\* |
+     |   $C_2$   |  0   |  1   |  -1  |       2        | -7.3              | `r (-7.3)^2/(4*3*2)`  | `r ((-7.3)^2/(4*3*2))/CME`  | \*\* |
+
+     $SC_{C1} = \frac {Q^2}{ra \sum c^2_{i}} = \frac {(-11.7)^2}{4(3)(6)} = `r (-11.7)^2/(4*3*6)`$
+
+     $SC_{C2} = \frac {Q^2}{ra \sum c^2_{i}} = \frac {(-7.3)^2}{4(3)(2)} = `r (-7.3)^2/(4*3*2)`$
+
+     \pagebreak
+
+IV. ESTADÍSTICO DE PRUEBA
+
+    $F_{C1} = \frac {CM_{C_1}}{CM_E} = \frac {`r (-11.7)^2/(4*3*6)`}{`r CME`} = `r ((-11.7)^2/(4*3*6))/CME`$
+
+    $F_{C_2} = \frac {CM_{C_2}}{CM_E} = \frac {`r (-7.3)^2/(4*3*2)`}{`r CME`} = `r ((-7.3)^2/(4*3*2))/CME`$
+
+    Se comprueba que $SC_B = SC_{C_{1}} + SC_{C_{2}}$
+
+    -   $SC_B=$ `r SCB`
+
+    -   $SC_{C_{1}} + SC_{C_{2}} = `r (-11.7)^2/(4*3*6)` + `r (-7.3)^2/(4*3*2)` = `r (-11.7)^2/(4*3*6) + (-7.3)^2/(4*3*2)`$
+
+V.  PUNTO CRÍTICO
+
+    -   $F_t=`r round(qf(0.05,1,gl_e,lower.tail = F),4)`$ al $5\%$
+
+    -   $F_t=`r round(qf(0.01,1,gl_e,lower.tail = F),4)`$ al $1\%$
+
+VI. VALOR EXPERIMENTAL
+
+    -   $F_{C_{1}} = `r ((-11.7)^2/(4*3*6))/CME`$
+
+    -   $F_{C_{2}} = `r ((-7.3)^2/(4*3*2))/CME`$
+
+VII. DECISIÓN
+
+     -   Para el $C_1$ se rechaza la $H_0$ con un $99\%$ de confianza. Por lo tanto existe diferencia altamente significativa en el rendimiento de cebada $(Kg./Ha.)$ con dosis de roca fosfórica de 333 y 666 $Kg./Ha.$. con respecto a ninguna dosis aplicada (Testigo).
+
+     -   Para el $C_2$ se rechaza la $H_0$ con un $99\%$ de confianza. Por lo tanto existe diferencia altamente significativa en el rendimiento de cebada $(Kg./Ha.)$ con dosis de roca fosfórica de 666 $Kg./Ha.$. con respecto a una dosis de 333 $Kg./Ha.$ .
+
+\pagebreak
+
+$C_1 = \mu_{.1.} \ vs. \ (\mu_{.2.} \ ; \ \mu_{.3.})$ $\Rightarrow$ $C_1 = 2\mu_{.1.} \ - \ \mu_{.2.} \ - \ \mu_{.3.}$
+
+![Contraste 1 - SPSS](B/c1.png){width="393"}
+
+ 
+
+$C_2 = \mu_{.2.} \ vs. \ \mu_{.3.}$ $\Rightarrow$ $C_2 = \mu_{.2.} \ - \ \mu_{.3.}$
+
+![Contraste 2 - SPSS](B/c2.png){width="391"}
+
+\pagebreak
+
+## PARA INTERACCIÓN A x B : ESTIÉRCOL DE OVINO x ROCA FOSFÓRICA
+
+ 
+
+$$
+Totales =\left\{\begin{array}{ll}SC_{c} = \frac {Q^2}{r \sum c^2_{i}} \\Q = \sum c_ix_{i.}\end{array}\right.
+$$
+
+ 
+
+|             |    $A_1$    |             |             |    $A_2$    |             |             |    $A_3$    |             |
+|:-----------:|:-----------:|:-----------:|:-----------:|:-----------:|:-----------:|:-----------:|:-----------:|:-----------:|
+|    $B_1$    |    $B_2$    |    $B_3$    |    $B_1$    |    $B_2$    |    $B_3$    |    $B_1$    |    $B_2$    |    $B_3$    |
+| $\mu_{11.}$ | $\mu_{12.}$ | $\mu_{13.}$ | $\mu_{21.}$ | $\mu_{22.}$ | $\mu_{23.}$ | $\mu_{31.}$ | $\mu_{32.}$ | $\mu_{33.}$ |
+
+$C_1 = (\mu_{31.} ; \mu_{32.} ; \mu_{33.}) \ vs. \ (\mu_{21.} ; \mu_{22.} ; \mu_{23.} ; \mu_{11.} ; \mu_{12.} ; \mu_{13.})$ $\Rightarrow$ $C_1 = 2\mu_{31.} + 2\mu_{32.} +  2\mu_{33.} - \mu_{21.} - \mu_{22.} - \mu_{23.} - \mu_{11.} - \mu_{12.} - \mu_{13.}$
+
+$C_2 = (\mu_{21.} ; \mu_{22.} ; \mu_{23.}) \ vs. \ (\mu_{11.} ; \mu_{12.} ; \mu_{13.})$ $\Rightarrow$ $C_2 = \mu_{21.} + \mu_{22.} + \mu_{23.} - \mu_{11.} - \mu_{12.} - \mu_{13.}$
+
+ 
+
+I.  HIPÓTESIS
+
+    $H_{0}: c=0$
+
+    $H_{1}: c \neq 0$
+
+II. NIVEL DE SIGNIFICANCIA
+
+    $\alpha=0.05$
+
+    $\alpha=0.01$
+
+III. VERIFICACIÓN DE ORTOGONALIDAD
+
+     |          | $\mu_{11.}$ | $\mu_{12.}$ | $\mu_{13.}$ | $\mu_{21.}$ | $\mu_{22.}$ | $\mu_{23.}$ | $\mu_{31.}$ | $\mu_{32.}$ | $\mu_{33.}$ |
+     |:--------:|:-----------:|:-----------:|:-----------:|:-----------:|:-----------:|:-----------:|:-----------:|:-----------:|:-----------:|
+     |  $C_1$   |     -1      |     -1      |     -1      |     -1      |     -1      |     -1      |     -2      |     -2      |     -2      |
+     |  $C_2$   |     -1      |     -1      |     -1      |      1      |      1      |      1      |      0      |      0      |      0      |
+     | $k_il_i$ |      1      |      1      |      1      |     -1      |     -1      |     -1      |      0      |      0      |      0      |
+
+     $\sum \frac {k_il_i}{n} = 0$
+
+     | $x_{ij.}$ | 4.75 | 7.9 | 11  | 7.6 | 6.85 | 9.75 | 10.75 | 10.55 | 11.85 | $\sum C^2_{i}$ | $\sum c_ix_{ij.}$ |        $SC_c$        |           $F_0$            | Sig. |
+     |:---------:|:----:|:---:|-----|:---:|------|------|-------|-------|-------|:--------------:|-------------------|:--------------------:|:--------------------------:|:----:|
+     |   $C_1$   |  -1  | -1  | -1  | -1  | -1   | -1   | 2     | 2     | 2     |       18       | 18.45             | `r (18.45)^2/(4*18)` | `r ((18.45)^2/(4*18))/CME` | \*\* |
+     |   $C_2$   |  -1  | -1  | -1  |  1  | 1    | 1    | 0     | 0     | 0     |       6        | 0.55              |  `r (0.55)^2/(4*6)`  |  `r ((0.55)^2/(4*6))/CME`  |  No  |
+
+     $SC_{C1} = \frac {Q^2}{r \sum c^2_{i}} = \frac {(18.45)^2}{4(18)} = `r (18.45)^2/(4*18)`$
+
+     $SC_{C2} = \frac {Q^2}{r \sum c^2_{i}} = \frac {(0.55)^2}{4(6)} = `r (0.55)^2/(4*6)`$
+
+     \pagebreak
+
+IV. ESTADÍSTICO DE PRUEBA
+
+    $F_{C1} = \frac {CM_{C_1}}{CM_E} = \frac {`r (18.45)^2/(4*18)`}{`r CME`} = `r ((18.45)^2/(4*18))/CME`$
+
+    $F_{C_2} = \frac {CM_{C_2}}{CM_E} = \frac {`r (0.55)^2/(4*6)`}{`r CME`} = `r ((0.55)^2/(4*6))/CME`$
+
+    Se comprueba que $SC_A = SC_{C_{1}} + SC_{C_{2}}$
+
+    -   $SC_A=$ `r SCA`
+
+    -   $SC_{C_{1}} + SC_{C_{2}} = `r (18.45)^2/(4*18)` + `r (0.55)^2/(4*6)` = `r (18.45)^2/(4*18) + (0.55)^2/(4*6)`$
+
+V.  PUNTO CRÍTICO
+
+    -   $F_t=`r round(qf(0.05,4,gl_e,lower.tail = F),4)`$ al $5\%$
+
+    -   $F_t=`r round(qf(0.01,4,gl_e,lower.tail = F),4)`$ al $1\%$
+
+VI. VALOR EXPERIMENTAL
+
+    -   $F_{C_{1}} = `r ((18.45)^2/(4*18))/CME`$
+
+    -   $F_{C_{2}} = `r ((0.55)^2/(4*6))/CME`$
+
+VII. DECISIÓN
+
+     -   Para el $C_1$ se rechaza la $H_0$ con un $99\%$ de confianza. Por lo tanto existe diferencia altamente significativa en el rendimiento de cebada $(Kg./Ha.)$ en los tratamientos 7, 8 y 9 con respecto al resto de los tratamientos.
+
+     -   Para el $C_2$ se acepta la $H_0$ con un $99\%$ de confianza. Por lo tanto no existe diferencia altamente significativa en el rendimiento de cebada $(Kg./Ha.)$ en los tratamientos 1, 2, 3, 4, 5 y 6 .
+
+\pagebreak
+
+$C_1 = (\mu_{31.} ; \mu_{32.} ; \mu_{33.}) \ vs. \ (\mu_{21.} ; \mu_{22.} ; \mu_{23.} ; \mu_{11.} ; \mu_{12.} ; \mu_{13.})$ $\Rightarrow$ $C_1 = 2\mu_{31.} + 2\mu_{32.} +  2\mu_{33.} - \mu_{21.} - \mu_{22.} - \mu_{23.} - \mu_{11.} - \mu_{12.} - \mu_{13.}$
+
+![Contraste 1 - SPSS](AB/c1.png){width="357"}
+
+ 
+
+$C_2 = (\mu_{21.} ; \mu_{22.} ; \mu_{23.}) \ vs. \ (\mu_{11.} ; \mu_{12.} ; \mu_{13.})$ $\Rightarrow$ $C_2 = \mu_{21.} + \mu_{22.} + \mu_{23.} - \mu_{11.} - \mu_{12.} - \mu_{13.}$
+
+ ![Contraste 2 - SPSS](AB/c2.png){width="356"}
+
+\pagebreak
+
+# COMPARACIONES MULTIPLES A POSTERIORI
+
+ 
+
+## PARA FACTOR A : ESTIÉRCOL DE OVINO
+
+### 1. PRUEBA DUNCAN
+
+$$
+ALS= AES \times S_{ \bar x}
+$$
+
+I.  $S_{\bar x} = \sqrt {\frac {CM_E}{br}} = \sqrt {\frac {`r CME`}{`r j`(`r k`)}} = `r sqrt(CME/(j*k))`$
+
+II. $AES$ : De la tabla Duncan $\Rightarrow$ ( $\alpha = 5 \%$ ,$a= `r i`,$ $GL_E = `r gl_e`$ )
+
+    |     | 2                        | 3                        |
+    |-----|--------------------------|--------------------------|
+    | AES | 2.92                     | 3.07                     |
+    | ALS | `r 2.92*sqrt(CME/(j*k))` | `r 3.07*sqrt(CME/(j*k))` |
+
+III. $\bar x_{i..} = \frac {x_{i..}}{br}$
+
+     $\bar x_{1..} = \frac {x_{1..}}{br} = \frac {`r sum(colSums(data1[1:3]))`}{`r j` (`r k`)} = `r round(sum(colSums(data1[1:3]))/(j*k),4)`$
+
+     $\bar x_{2..} = \frac {x_{2..}}{br} = \frac {`r sum(colSums(data1[4:6]))`}{`r j` (`r k`)} = `r round(sum(colSums(data1[4:6]))/(j*k),4)`$
+
+     $\bar x_{3..} = \frac {x_{3..}}{br} = \frac {`r sum(colSums(data1[7:9]))`}{`r j` (`r k`)} = `r round(sum(colSums(data1[7:9]))/(j*k),4)`$
+
+IV. Número de comparaciones
+
+    $\frac {a(a-1)}{2} = \frac {`r i`(`r i`-1)}{2} = `r i*(i-1)/2`$
+
+V.  Ordenamos los promedios de forma ascendente
+
+    | $\bar x_{1..}$                              | $\bar x_{2..}$                              | $\bar x_{3..}$                              |
+    |---------------------------------------------|---------------------------------------------|---------------------------------------------|
+    | `r round(sum(colSums(data1[1:3]))/(j*k),4)` | `r round(sum(colSums(data1[4:6]))/(j*k),4)` | `r round(sum(colSums(data1[7:9]))/(j*k),4)` |
+
+#### MÉTODO I
+
+| $\bar x_{1..}$                              | $\bar x_{2..}$                              | $\bar x_{3..}$                              |
+|---------------------------------------------|---------------------------------------------|---------------------------------------------|
+| `r round(sum(colSums(data1[1:3]))/(j*k),4)` | `r round(sum(colSums(data1[4:6]))/(j*k),4)` | `r round(sum(colSums(data1[7:9]))/(j*k),4)` |
+
+|     | 2                        | 3                        |
+|-----|--------------------------|--------------------------|
+| AES | 2.92                     | 3.07                     |
+| ALS | `r 2.92*sqrt(CME/(j*k))` | `r 3.07*sqrt(CME/(j*k))` |
+
+| Comparaciones                             | Dif.                                                                                | ALS                      | Dif \> ALS | Sig. |
+|-------------------------------------------|-------------------------------------------------------------------------------------|--------------------------|------------|------|
+| $\bar x_{8 \ t /Ha.} -\bar x_{0 \ t/Ha.}$ | `r round(sum(colSums(data1[7:9]))/(j*k),4)-round(sum(colSums(data1[1:3]))/(j*k),4)` | `r 3.07*sqrt(CME/(j*k))` | Si         | \*   |
+| $\bar x_{8 \ t /Ha.} -\bar x_{4 \ t/Ha.}$ | `r round(sum(colSums(data1[7:9]))/(j*k),4)-round(sum(colSums(data1[4:6]))/(j*k),4)` | `r 2.92*sqrt(CME/(j*k))` | Si         | \*   |
+| $\bar x_{4 \ t /Ha.} -\bar x_{0 \ t/Ha.}$ | `r round(sum(colSums(data1[4:6]))/(j*k),4)-round(sum(colSums(data1[1:3]))/(j*k),4)` | `r 2.92*sqrt(CME/(j*k))` | No         | No   |
+
+#### MÉTODO II : TRIANGULAR
+
+ 
+
+![](A/DUNCAN/M2.png){width="340"}
+
+#### MÉTODO III
+
+ 
+
+![](A/DUNCAN/M3.png){width="449"}
+
+#### MÉTODO EN R-STUDIO
+
+```{r, echo=FALSE}
+duncan.test(modelo,"A" ,console = TRUE)
+
+```
+
+ 
+
+| Dosis de Estiércol de Ovino | $\bar X_{i..}(rendimiento)$                 | Sig. |     |
+|-----------------------------|---------------------------------------------|:----:|-----|
+| 8 $t./Ha.$                  | `r round(sum(colSums(data1[7:9]))/(j*k),4)` |  a   |     |
+| 4 $t./Ha.$                  | `r round(sum(colSums(data1[4:6]))/(j*k),4)` |      | b   |
+| 0 $t./Ha.$                  | `r round(sum(colSums(data1[1:3]))/(j*k),4)` |      | b   |
+
+: Duncan al 5% del Rendimiento (t/Ha.)
+
+\pagebreak
+
+```{r, echo=FALSE,fig.width=5,fig.height=3}
+ggplot(mapping = aes(levels(data$A),with(data = data,expr = tapply(RENDIMIENTO, A, mean))))+
+  ylab("t/Ha.")+
+  xlab("Dosis de Estiércol de Ovino")+
+  ggtitle("Rendimiento Promedio en kg./Ha. en dosis de estiércol \n de ovino")+
+  geom_col(fill=7,color="black")
+  
+
+```
+
+ 
+
+#### COMPARACIONES MULTIPLES :  TUCKEY - DUNCAN - DUNNET EN SPSS  
+
+ 
+
+![](A/DUNNET/CM_SPSS_1.png){width="496"}
+
+![](A/DUNNET/CM_SPSS_2.png){width="363"}
+
+\pagebreak
+
+#### COMPARACIONES MULTIPLES :  TUCKEY - DUNCAN - DUNNET EN STATGRAPHICS  
+
+ 
+
+![](A/DUNNET/CM_STAT.png){width="543"}
+
+\pagebreak
+
+## PARA FACTOR B : ROCA FOSFÓRICA
+
+### 1. PRUEBA DUNCAN
+
+$$
+ALS= AES \times S_{ \bar x}
+$$
+
+I.  $S_{\bar x} = \sqrt {\frac {CM_E}{ar}} = \sqrt {\frac {`r CME`}{`r i`(`r k`)}} = `r sqrt(CME/(i*k))`$
+
+II. $AES$ : De la tabla Duncan $\Rightarrow$ ( $\alpha = 5 \%$ ,$b= `r j`,$ $GL_E = `r gl_e`$ )
+
+    |     | 2                        | 3                        |
+    |-----|--------------------------|--------------------------|
+    | AES | 2.92                     | 3.07                     |
+    | ALS | `r 2.92*sqrt(CME/(i*k))` | `r 3.07*sqrt(CME/(i*k))` |
+
+III. $\bar x_{.j.} = \frac {x_{.j.}}{ar}$
+
+     $\bar x_{.1.} = \frac {x_{.1.}}{ar} = \frac {`r sum(colSums(data1[c(1,4,7)]))`}{`r i` (`r k`)} = `r round(sum(colSums(data1[c(1,4,7)]))/(i*k),4)`$
+
+     $\bar x_{.2.} = \frac {x_{.2.}}{ar} = \frac {`r sum(colSums(data1[c(2,5,8)]))`}{`r i` (`r k`)} = `r round(sum(colSums(data1[c(2,5,8)]))/(i*k),4)`$
+
+     $\bar x_{.3.} = \frac {x_{.3.}}{ar} = \frac {`r sum(colSums(data1[c(3,6,9)]))`}{`r i` (`r k`)} = `r round(sum(colSums(data1[c(3,6,9)]))/(i*k),4)`$
+
+IV. Número de comparaciones
+
+    $\frac {b(b-1)}{2} = \frac {`r j`(`r j`-1)}{2} = `r j*(j-1)/2`$
+
+V.  Ordenamos los promedios de forma ascendente
+
+    | $\bar x_{1..}$                                   | $\bar x_{2..}$                                   | $\bar x_{3..}$                                   |
+    |--------------------------------------------------|--------------------------------------------------|--------------------------------------------------|
+    | `r round(sum(colSums(data1[c(1,4,7)]))/(i*k),4)` | `r round(sum(colSums(data1[c(2,5,8)]))/(i*k),4)` | `r round(sum(colSums(data1[c(3,6,9)]))/(i*k),4)` |
+
+#### MÉTODO I
+
+| $\bar x_{1..}$                                   | $\bar x_{2..}$                                   | $\bar x_{3..}$                                   |
+|--------------------------------------------------|--------------------------------------------------|--------------------------------------------------|
+| `r round(sum(colSums(data1[c(1,4,7)]))/(i*k),4)` | `r round(sum(colSums(data1[c(2,5,8)]))/(i*k),4)` | `r round(sum(colSums(data1[c(3,6,9)]))/(i*k),4)` |
+
+|     | 2                        | 3                        |
+|-----|--------------------------|--------------------------|
+| AES | 2.92                     | 3.07                     |
+| ALS | `r 2.92*sqrt(CME/(i*k))` | `r 3.07*sqrt(CME/(i*k))` |
+
+| Comparaciones                                       | Dif.                                                                                          | ALS                      | Dif \> ALS | Sig. |
+|-----------------------------------------------------|-----------------------------------------------------------------------------------------------|--------------------------|------------|------|
+| $\bar x_{ 666 \ Kg. /Ha.} -\bar x_{ 0 \ Kg./Ha.}$   | `r round(sum(colSums(data1[c(3,6,9)]))/(i*k),4)-round(sum(colSums(data1[c(1,4,7)]))/(i*k),4)` | `r 3.07*sqrt(CME/(i*k))` | Si         | \*   |
+| $\bar x_{ 666 \ Kg. /Ha.} -\bar x_{ 333 \ Kg./Ha.}$ | `r round(sum(colSums(data1[c(3,6,9)]))/(i*k),4)-round(sum(colSums(data1[c(2,5,8)]))/(i*k),4)` | `r 2.92*sqrt(CME/(i*k))` | Si         | \*   |
+| $\bar x_{333 \ Kg. /Ha.} -\bar x_{0 \ Kg./Ha.}$     | `r round(sum(colSums(data1[c(2,5,8)]))/(i*k),4)-round(sum(colSums(data1[c(1,4,7)]))/(i*k),4)` | `r 2.92*sqrt(CME/(i*k))` | No         | No   |
+
+\pagebreak
+
+#### MÉTODO II : TRIANGULAR
+
+ 
+
+![](B/M2.png){width="339"}
+
+#### MÉTODO III
+
+ 
+
+![](B/M3.png){width="414"}
+
+#### MÉTODO EN R-STUDIO
+
+```{r, echo=FALSE}
+duncan.test(modelo,"B" ,console = TRUE)
+
+```
+
+ 
+
+| Dosis de Roca Fosfórica | $\bar X_{i..}(rendimiento)$                      | Sig. |     |
+|-------------------------|--------------------------------------------------|:----:|-----|
+| 666 $Kg./Ha.$           | `r round(sum(colSums(data1[c(3,6,9)]))/(i*k),4)` |  a   |     |
+| 333 $Kg./Ha.$           | `r round(sum(colSums(data1[c(2,5,8)]))/(i*k),4)` |      | b   |
+| 0 $t./Ha.$              | `r round(sum(colSums(data1[c(1,4,7)]))/(i*k),4)` |      | b   |
+
+: Duncan al 5% del rendimiento (Kg./Ha.)
+
+\pagebreak
+
+```{r, echo=FALSE,fig.width=5,fig.height=3}
+ggplot(mapping = aes(levels(data$B),with(data = data,expr = tapply(RENDIMIENTO, B, mean))))+
+  ylab("Kg./Ha.")+
+  xlab("Dosis de Roca Fosfórica")+
+  ggtitle("Rendimiento Promedio en Kg./Ha. en dosis de roca \n fosfórica")+
+  geom_col(fill="#007EFF",color="black")
+
+```
+
+ 
+
+#### COMPARACIONES MULTIPLES :  TUCKEY - DUNCAN - DUNNET EN SPSS  
+
+ 
+
+![](B/CM_SPSS.png){width="548"}
+
+\pagebreak
+
+#### COMPARACIONES MULTIPLES :  TUCKEY - DUNCAN - DUNNET EN STATGRAPHICS  
+
+ 
+
+![](B/CM_STAT.png){width="543"}
+
+\pagebreak
+
+## PARA INTERACCIÓN AxB : ESTIÉRCOL DE OVINO x ROCA FOSFÓRICA
+
+### 1. PRUEBA DUNCAN
+
+$$
+ALS= AES \times S_{ \bar x}
+$$
+
+I.  $S_{\bar x} = \sqrt {\frac {CM_E}{r}} = \sqrt {\frac {`r CME`}{`r k`}} = `r sqrt(CME/(k))`$
+
+II. $AES$ : De la tabla Duncan $\Rightarrow$ ( $\alpha = 5 \%$ ,$ab= `r i*j`,$ $GL_E = `r gl_e`$ )
+
+    |     | 2                      | 3                      | 4                      | 5                      | 6                      | 7                      | 8                      | 9                      |
+    |-----|------------------------|------------------------|------------------------|------------------------|------------------------|------------------------|------------------------|------------------------|
+    | AES | 2.92                   | 3.07                   | 3.16                   | 3.23                   | 3.28                   | 3.32                   | 3.35                   | 3.37                   |
+    | ALS | `r 2.92*sqrt(CME/(k))` | `r 3.07*sqrt(CME/(k))` | `r 3.16*sqrt(CME/(k))` | `r 3.23*sqrt(CME/(k))` | `r 3.28*sqrt(CME/(k))` | `r 3.32*sqrt(CME/(k))` | `r 3.35*sqrt(CME/(k))` | `r 3.37*sqrt(CME/(k))` |
+
+III. $\bar x_{ij.} = \frac {x_{ij.}}{r}$
+
+     $\bar x_{11.} = \frac {x_{11.}}{r} = \frac {`r colSums(data1[1])`}{`r k`} = `r round(colSums(data1[1])/(k),4)`$
+
+     $\bar x_{12.} = \frac {x_{12.}}{r} = \frac {`r colSums(data1[2])`}{`r k`} = `r round(colSums(data1[2])/(k),4)`$
+
+     $\bar x_{13.} = \frac {x_{13.}}{r} = \frac {`r colSums(data1[3])`}{`r k`} = `r round(colSums(data1[3])/(k),4)`$
+
+     $\bar x_{21.} = \frac {x_{21.}}{r} = \frac {`r colSums(data1[4])`}{`r k`} = `r round(colSums(data1[4])/(k),4)`$
+
+     $\bar x_{22.} = \frac {x_{22.}}{r} = \frac {`r colSums(data1[5])`}{`r k`} = `r round(colSums(data1[5])/(k),4)`$
+
+     $\bar x_{23.} = \frac {x_{23.}}{r} = \frac {`r colSums(data1[6])`}{`r k`} = `r round(colSums(data1[6])/(k),4)`$
+
+     $\bar x_{31.} = \frac {x_{31.}}{r} = \frac {`r colSums(data1[7])`}{`r k`} = `r round(colSums(data1[7])/(k),4)`$
+
+     $\bar x_{32.} = \frac {x_{32.}}{r} = \frac {`r colSums(data1[8])`}{`r k`} = `r round(colSums(data1[8])/(k),4)`$
+
+     $\bar x_{33.} = \frac {x_{33.}}{r} = \frac {`r colSums(data1[9])`}{`r k`} = `r round(colSums(data1[9])/(k),4)`$
+
+     |       | $A_1$                              | $A_2$                              | $A_3$                              |
+     |-------|------------------------------------|------------------------------------|------------------------------------|
+     | $B_1$ | `r round(colSums(data1[1])/(k),4)` | `r round(colSums(data1[4])/(k),4)` | `r round(colSums(data1[7])/(k),4)` |
+     | $B_2$ | `r round(colSums(data1[2])/(k),4)` | `r round(colSums(data1[5])/(k),4)` | `r round(colSums(data1[8])/(k),4)` |
+     | $B_3$ | `r round(colSums(data1[3])/(k),4)` | `r round(colSums(data1[6])/(k),4)` | `r round(colSums(data1[9])/(k),4)` |
+
+IV. Número de comparaciones
+
+    $\frac {t(t-1)}{2} = \frac {`r i*j`(`r i*j`-1)}{2} = `r i*j*(i*j-1)/2`$
+
+V.  Ordenamos los promedios de forma ascendente
+
+    | $\bar x_{11.}$                     | $\bar x_{22.}$                     | $\bar x_{21.}$                     | $\bar x_{12.}$                     | $\bar x_{23.}$                     | $\bar x_{32.}$                     | $\bar x_{31.}$                     | $\bar x_{13.}$                     | $\bar x_{33.}$                     |
+    |------------------------------------|------------------------------------|------------------------------------|------------------------------------|------------------------------------|------------------------------------|------------------------------------|------------------------------------|------------------------------------|
+    | `r round(colSums(data1[1])/(k),4)` | `r round(colSums(data1[5])/(k),4)` | `r round(colSums(data1[4])/(k),4)` | `r round(colSums(data1[2])/(k),4)` | `r round(colSums(data1[6])/(k),4)` | `r round(colSums(data1[8])/(k),4)` | `r round(colSums(data1[7])/(k),4)` | `r round(colSums(data1[3])/(k),4)` | `r round(colSums(data1[9])/(k),4)` |
+
+\pagebreak
+
+#### MÉTODO II : TRIANGULAR
+
+ 
+
+![](AB/m2.png)
+
+#### MÉTODO III
+
+ 
+
+![](AB/m3.png)
+
+#### MÉTODO EN R-STUDIO
+
+```{r, echo=FALSE}
+duncan.test(modeloT,"TRATAMIENTO" ,console = TRUE)
+
+```
+
+ 
+
+#### COMPARACIONES MULTIPLES :  TUCKEY - DUNCAN - DUNNET EN SPSS  
+
+ 
+
+![](AB/CM_SPSS_1.png){width="580"}
+
+\pagebreak
+
+![](AB/CM_SPSS_2.png){width="479"}
+
+ 
+
+#### COMPARACIONES MULTIPLES :  TUCKEY - DUNCAN - DUNNET EN STATGRAPHICS   
+
+![](AB/CM_stat.png){width="462"}
+
+\pagebreak
+
+```{r,echo=FALSE,fig.cap="Gráfico de Interacción - RStudio"}
+library(phia)
+grafica <- interactionMeans(modelo)
+plot(grafica)
+
+```
+
+![Gráfico de Interacción - SPSS](AB/g_interaccion.png){width="435"}
+
+![Gráfico de Interacción -Statgraphics](AB/g_inter_stat.png){width="565"}
+
+\pagebreak
+
+# ANÁLISIS DE TENDENCIA
+
+# FACTOR A : DOSIS DE ESTIÉRCOL DE OVINO
+
+ 
+
+$$
+Totales =\left\{\begin{array}{ll}SC_{R(A)} = \frac {Q^2}{rb \sum c^2_{i}} \\Q = \sum c_ix_{i..}\end{array}\right.
+$$
+
+ 
+
+| $x_{i..}$  | `r sum(colSums(data1[1:3]))` | `r sum(colSums(data1[4:6]))` | `r sum(colSums(data1[7:9]))` | $\sum c^2_i$ | $\sum c_ix_{i..}$                                                                          | $SC_c$                                                                                               | $F_0$                                                                                                      | $Sig.$ |
+|------------|------------------------------|------------------------------|------------------------------|--------------|--------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------|--------|
+| Lineal     | -1                           | 0                            | 1                            | 2            | `r sum(-1*sum(colSums(data1[1:3])),1*sum(colSums(data1[7:9])))`                            | `r sum(-1*sum(colSums(data1[1:3])),1*sum(colSums(data1[7:9])))^2/(k*j*2)`                            | `r (sum(-1*sum(colSums(data1[1:3])),1*sum(colSums(data1[7:9])))^2/(k*j*2))/CME`                            | \*\*   |
+| Cuadrático | 1                            | -2                           | 1                            | 6            | `r sum(1*sum(colSums(data1[1:3])),-2*sum(colSums(data1[4:6])),1*sum(colSums(data1[7:9])))` | `r sum(1*sum(colSums(data1[1:3])),-2*sum(colSums(data1[4:6])),1*sum(colSums(data1[7:9])))^2/(k*j*6)` | `r (sum(1*sum(colSums(data1[1:3])),-2*sum(colSums(data1[4:6])),1*sum(colSums(data1[7:9])))^2/(k*j*6))/CME` | \*\*   |
+
+ 
+
+$SC_{A(Lineal)} = \frac {Q^2}{rb \sum c^2_{i}} = \frac {`r sum(-1*sum(colSums(data1[1:3])),1*sum(colSums(data1[7:9])))`^2 }{`r k*j`(2)} =`r sum(-1*sum(colSums(data1[1:3])),1*sum(colSums(data1[7:9])))^2/(k*j*2)`$ $\Rightarrow$ $F_0 = \frac {CM_{A_{Lineal}}}{CM_E} = \frac {`r sum(-1*sum(colSums(data1[1:3])),1*sum(colSums(data1[7:9])))^2/(k*j*2)`}{`r CME`} = `r (sum(-1*sum(colSums(data1[1:3])),1*sum(colSums(data1[7:9])))^2/(k*j*2))/CME`$
+
+$SC_{A(Cuadra.)} = \frac {Q^2}{rb \sum c^2_{i}} = \frac {`r sum(1*sum(colSums(data1[1:3])),-2*sum(colSums(data1[4:6])),1*sum(colSums(data1[7:9])))`^2 }{`r k*j`(6)} =`r sum(1*sum(colSums(data1[1:3])),-2*sum(colSums(data1[4:6])),1*sum(colSums(data1[7:9])))^2/(k*j*6)`$ $\Rightarrow$ $F_0 = \frac {CM_{A_{Cuadra.}}}{CM_E} = \frac {`r sum(1*sum(colSums(data1[1:3])),-2*sum(colSums(data1[4:6])),1*sum(colSums(data1[7:9])))^2/(k*j*6)`}{`r CME`} = `r (sum(1*sum(colSums(data1[1:3])),-2*sum(colSums(data1[4:6])),1*sum(colSums(data1[7:9])))^2/(k*j*6))/CME`$
+
+$\alpha=0.05 \rightarrow F_{5 \%}(1,24)= `r qf(0.05,1,gl_e,lower.tail=F)`$
+
+$\alpha=0.01 \rightarrow F_{1 \%}(1,24) = `r qf(0.01,1,gl_e,lower.tail=F)`$
+
+ 
+
+Se comprueba que $SC_A = SC_{A_{lineal}} + SC_{A_{Cuadra.}}$
+
+-   $SC_A=$ `r SCA`
+
+-   $SC_{A_{lineal}} + SC_{A_{Cuadra.}} = `r sum(-1*sum(colSums(data1[1:3])),1*sum(colSums(data1[7:9])))^2/(k*j*2)`+`r sum(1*sum(colSums(data1[1:3])),-2*sum(colSums(data1[4:6])),1*sum(colSums(data1[7:9])))^2/(k*j*6)` = `r sum(1*sum(colSums(data1[1:3])),-2*sum(colSums(data1[4:6])),1*sum(colSums(data1[7:9])))^2/(k*j*6)+sum(-1*sum(colSums(data1[1:3])),1*sum(colSums(data1[7:9])))^2/(k*j*2)`$
+
+ 
+
+`Al realizar la prueba de hipótesis resulta que el efecto de las 3 dosis de estiercol de ovino en el rendimiento (Kg./Ha.) sigue una distribución lineal y cuadrática altamente significativa. Se eligie la tendencia lineal por tener mayor suma de cuadrados.`
+
+| $X - Dosis \ de \ Estiércol \ de \ onino \ (t/Ha.)$ | $Y - Rendimiento (Kg.Ha)$ |
+|:---------------------------------------------------:|:-------------------------:|
+|                          0                          |          1.9708           |
+|                          4                          |          2.0167           |
+|                          8                          |          2.7625           |
+
+$$y_i = 1.854 + 0.099x_i \ ; \ r = 0.8907$$
+
+\pagebreak
+
+```{r,echo=FALSE,error=FALSE,fig.height=4.5}
+x<- c(0,4,8)
+y<- c(1.9708,2.0167,2.7625)
+
+ggplot(mapping = aes(x, y)) +
+  xlab("Dosis de Estiércol de ovino t/Ha.")+
+  ylab("Kg./Ha")+
+  ggtitle("Análsis de Tendencia del Rendimiento Kg./Ha en 3 dosis de estiércol \n de ovino")+
+  geom_point(color="2") +
+  geom_smooth(method = "lm",level=0.95,formula=y~x)
+
+```
+
+### CONTRASTE PARA TENDENCIA LINEAL - SPSS  
+
+![](A/lineal.png){width="383"}
+
+### CONTRASTE PARA TENDENCIA CUADRÁTICA - SPSS   
+
+![](A/cuadratico.png){width="384"}
+
+\pagebreak
+
+# FACTOR B : DOSIS DE ROCA FOSFÓRICA
+
+ 
+
+$$
+Totales =\left\{\begin{array}{ll}SC_{R(B)} = \frac {Q^2}{ra \sum c^2_{i}} \\Q = \sum c_ix_{.j.}\end{array}\right.
+$$
+
+ 
+
+| $x_{.j.}$  | `r sum(colSums(data1[c(1,4,7)]))` | `r sum(colSums(data1[c(2,5,8)]))` | `r sum(colSums(data1[c(3,6,9)]))` | $\sum c^2_i$ | $\sum c_ix_{.i.}$                                                                          | $SC_c$                                                                                                              | $F_0$                                                                                                                     | $Sig.$ |
+|------------|-----------------------------------|-----------------------------------|-----------------------------------|--------------|--------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------|--------|
+| Lineal     | -1                                | 0                                 | 1                                 | 2            | `r sum(-1*sum(colSums(data1[c(1,4,7)])),1*sum(colSums(data1[c(3,6,9)])))`                  | `r sum(-1*sum(colSums(data1[c(1,4,7)])),1*sum(colSums(data1[c(3,6,9)])))^2/(k*i*2)`                                 | `r (sum(-1*sum(colSums(data1[c(1,4,7)])),1*sum(colSums(data1[c(3,6,9)])))^2/(k*i*2))/CME`                                 | \*\*   |
+| Cuadrático | 1                                 | -2                                | 1                                 | 6            | `r sum(1*sum(colSums(data1[1:3])),-2*sum(colSums(data1[4:6])),1*sum(colSums(data1[7:9])))` | `r sum(1*sum(colSums(data1[c(1,4,7)])),-2*sum(colSums(data1[c(2,5,8)])),1*sum(colSums(data1[c(3,6,9)])))^2/(k*i*6)` | `r (sum(1*sum(colSums(data1[c(1,4,7)])),-2*sum(colSums(data1[c(2,5,8)])),1*sum(colSums(data1[c(3,6,9)])))^2/(k*i*6))/CME` | No     |
+
+ 
+
+$SC_{B(Lineal)} = \frac {Q^2}{ra \sum c^2_{i}} = \frac {`r sum(-1*sum(colSums(data1[c(1,4,7)])),1*sum(colSums(data1[c(3,6,9)])))`^2 }{`r k*i`(2)} =`r sum(-1*sum(colSums(data1[c(1,4,7)])),1*sum(colSums(data1[c(3,6,9)])))^2/(k*i*2)`$ $\Rightarrow$ $F_0 = \frac {CM_{B_{Lineal}}}{CM_E} = \frac {`r sum(-1*sum(colSums(data1[c(1,4,7)])),1*sum(colSums(data1[c(3,6,9)])))^2/(k*i*2)`}{`r CME`} = `r (sum(-1*sum(colSums(data1[c(1,4,7)])),1*sum(colSums(data1[c(3,6,9)])))^2/(k*i*2))/CME`$
+
+$SC_{B(Cuadra.)} = \frac {Q^2}{ra \sum c^2_{i}} = \frac {`r sum(1*sum(colSums(data1[c(1,4,7)])),-2*sum(colSums(data1[c(2,5,8)])),1*sum(colSums(data1[c(3,6,9)])))`^2 }{`r k*i`(6)} =`r sum(1*sum(colSums(data1[c(1,4,7)])),-2*sum(colSums(data1[c(2,5,8)])),1*sum(colSums(data1[c(3,6,9)])))^2/(k*i*6)`$ $\Rightarrow$ $F_0 = \frac {CM_{B_{Cuadra.}}}{CM_E} = \frac {`r sum(1*sum(colSums(data1[c(1,4,7)])),-2*sum(colSums(data1[c(2,5,8)])),1*sum(colSums(data1[c(3,6,9)])))^2/(k*i*6)`}{`r CME`} = `r (sum(1*sum(colSums(data1[c(1,4,7)])),-2*sum(colSums(data1[c(2,5,8)])),1*sum(colSums(data1[c(3,6,9)])))^2/(k*i*6))/CME`$
+
+$\alpha=0.05 \rightarrow F_{5 \%}(1,24)= `r qf(0.05,1,gl_e,lower.tail=F)`$
+
+$\alpha=0.01 \rightarrow F_{1 \%}(1,24) = `r qf(0.01,1,gl_e,lower.tail=F)`$
+
+ 
+
+Se comprueba que $SC_B = SC_{B_{lineal}} + SC_{B_{Cuadra.}}$
+
+-   $SC_B=$ `r SCB`
+
+-   $SC_{B_{lineal}} + SC_{B_{Cuadra.}} = `r sum(-1*sum(colSums(data1[c(1,4,7)])),1*sum(colSums(data1[c(3,6,9)])))^2/(k*i*2)`+`r sum(1*sum(colSums(data1[c(1,4,7)])),-2*sum(colSums(data1[c(2,5,8)])),1*sum(colSums(data1[c(3,6,9)])))^2/(k*i*6)` = `r sum(1*sum(colSums(data1[c(1,4,7)])),-2*sum(colSums(data1[c(2,5,8)])),1*sum(colSums(data1[c(3,6,9)])))^2/(k*i*6)+sum(-1*sum(colSums(data1[c(1,4,7)])),1*sum(colSums(data1[c(3,6,9)])))^2/(k*i*2)`$
+
+ 
+
+Dado que $F_0 > F_t$ tanto para el $1\%$ y $5\%$ se rechaza $H_0$, por lo tanto el rendimiento de cebada en \$Kg./Ha.\$ con relación a las dosis de roca fosfórica sigue una tendencia lineal altamente significativa.
+
+ 
+
+| $X - Dosis \ de \ Roca \ fosfórica \ (Kg./Ha.)$ | $Y - Rendimiento (Kg.Ha)$ |
+|:-----------------------------------------------:|:-------------------------:|
+|                        0                        |           1.925           |
+|                       333                       |          2.1083           |
+|                       666                       |          2.7167           |
+
+$$y_i = 1.8542 + 0.0012x_i \ ; \ r = 0.9552$$
+
+\pagebreak
+
+```{r,echo=FALSE}
+p<- c(0,333,666)
+q<- c(1.925,2.1083,2.7167)
+
+ggplot(mapping = aes(p, q)) +
+  xlab("Dosis de Roca Fosfórica Kg./Ha.")+
+  ylab("Kg./Ha")+
+  ggtitle("Análsis de Tendencia del Rendimiento Kg./Ha en 3 dosis de roca \n fosfórica")+
+  geom_point(color="2") +
+  geom_smooth(method = "lm",level=0.95,formula = y~x)
+
+```
+
+### CONTRASTE PARA TENDENCIA LINEAL - SPSS  
+
+![](B/lineal.png){width="370"}
+
+### CONTRASTE PARA TENDENCIA CUADRÁTICA - SPSS 
+
+![](B/cuadratico.png){width="377" height="78"}
+
+\pagebreak
+
+# INTERACCIÓN A x B : ESTIÉRCOL DE OVINO x ROCA FOSFÓRICA
+
+ 
+
+$$
+Totales =\left\{\begin{array}{ll}SC_{R(A*B)} = \frac {Q^2}{r (\sum c^2_{A})(\sum c^2_{B})} \\Q = \sum c_{i_{A}}c_{i_{B}}x_{ij.}\end{array}\right.
+$$
+
+ 
+
+|                    |              |                  | $A_1$ | $A_2$ | $A_3$ | $\sum c^2_{i_{A}}$ |
+|:------------------:|:------------:|:----------------:|:-----:|:-----:|:-----:|:------------------:|
+|                    |              |   Lineal $C_i$   |  -1   |   0   |   1   |         2          |
+|                    | Lineal $C_i$ | Cuadrática $C_i$ |   1   |  -2   |   1   |         6          |
+|       $B_1$        |      -1      |        1         | 4.75  |  7.6  | 10.75 |                    |
+|       $B_2$        |      0       |        -2        |  7.9  | 6.85  | 10.55 |                    |
+|       $B_3$        |      1       |        1         |  11   | 9.75  | 11.85 |                    |
+| $\sum c^2_{i_{A}}$ |      2       |        6         |       |       |       |                    |
+
+|               |    $A_{Lineal}$     |    $A_{Cuadrá.}$     |
+|:-------------:|:-------------------:|:--------------------:|
+| $B_{Lineal}$  | $A_{Lin.}B_{Lin.}$  | $A_{Cuad.}B_{Lin.}$  |
+| $B_{Cuadrá.}$ | $A_{Lin.}B_{Cuad.}$ | $A_{Cuad.}B_{Cuad.}$ |
+
+ 
+
+$SC_{A_{Lin.}*B_{Lin.}} = \frac {Q^2}{r (\sum c^2_{A})(\sum c^2_{B})}=\frac {`r (-1)*(-1)*(4.75) + (-1)*(1)*(11) + (1)*(-1)*(10.75)+(1)*(1)*(11.85)`^2}{ 4(2)(2)} = `r ((-1)*(-1)*(4.75) + (-1)*(1)*(11) + (1)*(-1)*(10.75)+(1)*(1)*(11.85))^2/(4*2*2)`$
+
+-   $Q = \sum c_{i_{A}}c_{i_{B}}x_{ij.} = (-1)(-1)(4.75) + (-1)(1)(11) + (1)(-1)(10.75)+(1)(1)(11.85) = `r (-1)*(-1)*(4.75) + (-1)*(1)*(11) + (1)*(-1)*(10.75)+(1)*(1)*(11.85)`$
+
+ 
+
+$SC_{A_{Lin.}B_{Cuad.}}= \frac {Q^2}{r (\sum c^2_{A})(\sum c^2_{B})} = \frac {Q^2}{r (\sum c^2_{A})(\sum c^2_{B})} = \frac {`r (-1)*(1)*(4.75) + (-1)*(-2)*(7.9) + (-1)*(1)*(11) + (1)*(1)*(10.75) + (1)*(-2)*(10.55) + (1)*(1)*(11.85)`^2}{4(2)(6)} = `r ((-1)*(1)*(4.75) + (-1)*(-2)*(7.9) + (-1)*(1)*(11) + (1)*(1)*(10.75) + (1)*(-2)*(10.55) + (1)*(1)*(11.85))^2/(4*2*6)`$
+
+-   $Q=\sum c_{i_{A}}c_{i_{B}}x_{ij.} = (-1)(1)(4.75) + (-1)(-2)(7.9) + (-1)(1)(11) + (1)(1)(10.75) + (1)(-2)(10.55) + (1)(1)(11.85) = `r (-1)*(1)*(4.75) + (-1)*(-2)*(7.9) + (-1)*(1)*(11) + (1)*(1)*(10.75) + (1)*(-2)*(10.55) + (1)*(1)*(11.85)`$
+
+$SC_{A_{Cuad.}B_{Lin.}}=\frac {Q^2}{r (\sum c^2_{A})(\sum c^2_{B})}= \frac {`r (1)*(-1)*(4.75) + (1)*(1)*(11) + (-2)*(-1)*(7.6) + (-2)*(1)*(9.75) + (1)*(-1)*(10.75) + (1)*(1)*(11.85)`^2}{4(6)(2)}=`r ((1)*(-1)*(4.75) + (1)*(1)*(11) + (-2)*(-1)*(7.6) + (-2)*(1)*(9.75) + (1)*(-1)*(10.75) + (1)*(1)*(11.85))^2/(4*6*2)`$
+
+-   $Q = \sum c_{i_{A}}c_{i_{B}}x_{ij.} = (1)(-1)(4.75) + (1)(1)(11) + (-2)(-1)(7.6) + (-2)(1)(9.75) + (1)(-1)(10.75) + (1)(1)(11.85) = `r (1)*(-1)*(4.75) + (1)*(1)*(11) + (-2)*(-1)*(7.6) + (-2)*(1)*(9.75) + (1)*(-1)*(10.75) + (1)*(1)*(11.85)`$
+
+$SC_{A_{Cuad.}B_{Cuad.}}=\frac {Q^2}{r (\sum c^2_{A})(\sum c^2_{B})} = \frac {`r (1)*(1)*(4.75) + (1)*(-2)*(7.9) + (1)*(1)*(11) + (-2)*(1)*(7.6) + (-2)*(-2)*(6.85) + (-2)*(1)*(9.75) + (1)*(1)*(10.75) + (1)*(-2)*(10.55) + (1)*(1)*(11.85)`^2}{4(6)(6)} = `r ((1)*(1)*(4.75) + (1)*(-2)*(7.9) + (1)*(1)*(11) + (-2)*(1)*(7.6) + (-2)*(-2)*(6.85) + (-2)*(1)*(9.75) + (1)*(1)*(10.75) + (1)*(-2)*(10.55) + (1)*(1)*(11.85))^2/(4*6*6)`$
+
+-   $Q = \sum c_{i_{A}}c_{i_{B}}x_{ij.} = (1)(1)(4.75) + (1)(-2)(7.9) + (1)(1)(11) + (-2)(1)(7.6) + (-2)(-2)(6.85) + (-2)(1)(9.75) + (1)(1)(10.75) + (1)(-2)(10.55) + (1)(1)(11.85) = `r (1)*(1)*(4.75) + (1)*(-2)*(7.9) + (1)*(1)*(11) + (-2)*(1)*(7.6) + (-2)*(-2)*(6.85) + (-2)*(1)*(9.75) + (1)*(1)*(10.75) + (1)*(-2)*(10.55) + (1)*(1)*(11.85) `$
+
+\pagebreak
+
+|          F.V          |     G.L      |                                                         SC.                                                         |                                                        CM\.                                                         |                                                           $F_0$                                                           | Sig. |
+|:---------------------:|:------------:|:-------------------------------------------------------------------------------------------------------------------:|:-------------------------------------------------------------------------------------------------------------------:|:-------------------------------------------------------------------------------------------------------------------------:|:----:|
+|        Bloque         |   `r gl_b`   |                                                      `r SCBLO`                                                      |                                                   `r SCBLO/gl_b`                                                    |                                                `r (SCBLO*gl_e)/(SCE*gl_b)`                                                |      |
+|           A           |   `r gl_i`   |                                                       `r SCA`                                                       |                                                    `r SCA/gl_i`                                                     |                                                 `r (SCA*gl_e)/(SCE*gl_i)`                                                 | \*\* |
+|      $A_{Lin.}$       |      1       |                      `r sum(-1*sum(colSums(data1[1:3])),1*sum(colSums(data1[7:9])))^2/(k*j*2)`                      |                      `r sum(-1*sum(colSums(data1[1:3])),1*sum(colSums(data1[7:9])))^2/(k*j*2)`                      |                      `r (sum(-1*sum(colSums(data1[1:3])),1*sum(colSums(data1[7:9])))^2/(k*j*2))/CME`                      | \*\* |
+|      $A_{Cuad.}$      |      1       |        `r sum(1*sum(colSums(data1[1:3])),-2*sum(colSums(data1[4:6])),1*sum(colSums(data1[7:9])))^2/(k*j*6)`         |        `r sum(1*sum(colSums(data1[1:3])),-2*sum(colSums(data1[4:6])),1*sum(colSums(data1[7:9])))^2/(k*j*6)`         |        `r (sum(1*sum(colSums(data1[1:3])),-2*sum(colSums(data1[4:6])),1*sum(colSums(data1[7:9])))^2/(k*j*6))/CME`         | \*\* |
+|           B           |   `r gl_j`   |                                                       `r SCB`                                                       |                                                    `r SCB/gl_j`                                                     |                                                 `r (SCB*gl_e)/(SCE*gl_j)`                                                 | \*\* |
+|      $B_{Lin.}$       |      1       |                 `r sum(-1*sum(colSums(data1[c(1,4,7)])),1*sum(colSums(data1[c(3,6,9)])))^2/(k*i*2)`                 |                 `r sum(-1*sum(colSums(data1[c(1,4,7)])),1*sum(colSums(data1[c(3,6,9)])))^2/(k*i*2)`                 |                 `r (sum(-1*sum(colSums(data1[c(1,4,7)])),1*sum(colSums(data1[c(3,6,9)])))^2/(k*i*2))/CME`                 | \*\* |
+|      $B_{Cuad.}$      |      1       | `r sum(1*sum(colSums(data1[c(1,4,7)])),-2*sum(colSums(data1[c(2,5,8)])),1*sum(colSums(data1[c(3,6,9)])))^2/(k*i*6)` | `r sum(1*sum(colSums(data1[c(1,4,7)])),-2*sum(colSums(data1[c(2,5,8)])),1*sum(colSums(data1[c(3,6,9)])))^2/(k*i*6)` | `r (sum(1*sum(colSums(data1[c(1,4,7)])),-2*sum(colSums(data1[c(2,5,8)])),1*sum(colSums(data1[c(3,6,9)])))^2/(k*i*6))/CME` |  No  |
+|         $A*B$         | `r gl_trat`  |                                                     `r SCTRAT`                                                      |                                                 `r SCTRAT/gl_trat`                                                  |                                              `r (SCTRAT*gl_e)/(SCE*gl_trat)`                                              | \*\* |
+|  $A_{Lin.}*B_{lin.}$  |      1       |                                                      1.6576563                                                      |                                                      1.6576563                                                      |                                                     `r 1.6576563/CME`                                                     | \*\* |
+| $A_{Lin.}*B_{Cuad.}$  |      1       |                                                      0.0500521                                                      |                                                      0.0500521                                                      |                                                     `r 0.0500521/CME`                                                     |  No  |
+| $A_{Cuad.}*B_{lin.}$  |      1       |                                                      0.193802                                                       |                                                      0.193802                                                       |                                                     `r 0.1938021/CME`                                                     |  No  |
+| $A_{Cuad.}*B_{Cuad.}$ |      1       |                                                      0.2376563                                                      |                                                      0.2376563                                                      |                                                     `r 0.2376563/CME`                                                     |  No  |
+|         Error         |   `r gl_e`   |                                                       `r SCE`                                                       |                                                    `r SCE/gl_e`                                                     |                                                                                                                           |      |
+|         Total         | `r gl_total` |                                                       `r SCT`                                                       |                                                                                                                     |                                                                                                                           |      |
+
+: Análisis de Varianza del rendimiento en Kg./Ha. de cebada
+
+ 
+
+Dado que la Tendencia de la interacción de $A_{Lin.}*B_{Lin.}$, resultó altamente significativa; amerita estimar los parámetros de dicho modelo.
+
+ 
+
+-   Sea el Factor A : Estiércol de Ovino = $X_1$
+
+-   Sea el Factor B : Roca Fosfórica = $X_2$
+
+    | $X_1$ | $X_2$ | $X_1*X_2$ | $Y$  |
+    |:-----:|:-----:|:---------:|------|
+    |   0   |   0   |     0     | 1.19 |
+    |   0   |  333  |     0     | 1.98 |
+    |   0   |  666  |     0     | 2.75 |
+    |   4   |   0   |     0     | 1.9  |
+    |   4   |  333  |   1332    | 1.71 |
+    |   4   |  666  |   2664    | 2.44 |
+    |   8   |   0   |     0     | 2.69 |
+    |   8   |  333  |   2664    | 2.64 |
+    |   8   |  666  |   5328    | 2.96 |
+
+$$y = 1.1386 + 0.1794x_1 + 0.0022x_2 - 0.0002421x_1x_2$$
+
+\pagebreak
+
+```{r , echo=FALSE}
+x1=c(0,0,0,4,4,4,8,8,8)
+x2=c(0,333,666,0,333,666,0,333,666)
+x1x2=c(0,0,0,0,1332,2664,0,2664,5328)
+y=c(1.19,1.98,2.75,1.9,1.71,2.44,2.69,2.64,2.96)
+m = lm(y~x1+x2+x1x2)
+summary(m)
+
+```
